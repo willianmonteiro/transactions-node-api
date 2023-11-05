@@ -29,6 +29,7 @@ module.exports = {
 		'@typescript-eslint'
 	],
 	'rules': {
+		'@typescript-eslint/no-unused-vars': [1],
 		'indent': [
 			'error',
 			'tab'

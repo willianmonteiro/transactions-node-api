@@ -1,11 +1,12 @@
 import { FastifyInstance } from 'fastify';
 import { knex } from '../database';
 import { z } from 'zod';
+import { randomUUID } from 'node:crypto';
 
 export async function transactionRoutes(app: FastifyInstance) {
 	app.get('/', async (_, response) => {
 		const transactions = await knex('transactions').select();
-		response
+		return response
 			.send({
 				total: transactions.length,
 				transactions
@@ -18,13 +19,13 @@ export async function transactionRoutes(app: FastifyInstance) {
 		});
 		const { id } = getTransactionParamsSchema.parse(request.params);
 		const transaction = await knex('transactions').where('id', id).first();
-		response.send({ transaction });
+		return response.send({ transaction });
 	});
 
 
 	app.get('/statement', async (_, response) => {
 		const statement = await knex('transactions').sum('amount', { as: 'amount' }).first();
-		response.send({ statement });
+		return response.send({ statement });
 	});
 
 	app.post('/', async (request, response) => {
@@ -34,15 +35,27 @@ export async function transactionRoutes(app: FastifyInstance) {
 			type: z.enum(['income', 'expense']),
 		});
 		const { title, amount, type } = createTransactionSchema.parse(request.body);
+
+		let sessionId = request.cookies.sessionId;
+
+		if (!sessionId) {
+			sessionId = randomUUID();
+			response.setCookie('sessionId', sessionId, {
+				path: '/',
+				maxAge: 60 * 60 * 24 * 7, // 7 days
+			});
+		}
+
 		const transaction = await knex('transactions')
 			.insert({
-				id: crypto.randomUUID(),
+				id: randomUUID(),
 				title, 
 				amount: type === 'income' ? amount : amount * -1,
+				session_id: sessionId
 			})
 			.returning('*');
 
-		response
+		return response
 			.status(201)
 			.send(transaction);
 	});

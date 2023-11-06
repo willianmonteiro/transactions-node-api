@@ -1,11 +1,16 @@
 import { FastifyInstance } from 'fastify';
-import { knex } from '../database';
 import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
+import { knex } from '../database';
+import { checkSessionIdExists } from '../middleware/check-session-id';
 
 export async function transactionRoutes(app: FastifyInstance) {
-	app.get('/', async (_, response) => {
-		const transactions = await knex('transactions').select();
+	app.get('/', { preHandler: [checkSessionIdExists] }, async (request, response) => {
+		const { sessionId } = request.cookies;
+		const transactions = await knex('transactions')
+			.where('session_id', sessionId)
+			.select();
+
 		return response
 			.send({
 				total: transactions.length,
@@ -13,22 +18,28 @@ export async function transactionRoutes(app: FastifyInstance) {
 			});
 	});
 
-	app.get('/:id', async (request, response) => {
+	app.get('/:id', { preHandler: [checkSessionIdExists] }, async (request, response) => {
 		const getTransactionParamsSchema = z.object({
 			id: z.string().uuid(),
 		});
 		const { id } = getTransactionParamsSchema.parse(request.params);
-		const transaction = await knex('transactions').where('id', id).first();
+		const { sessionId } = request.cookies;
+		const transaction = await knex('transactions')
+			.where({ id, session_id: sessionId })
+			.first();
 		return response.send({ transaction });
 	});
 
-
-	app.get('/statement', async (_, response) => {
-		const statement = await knex('transactions').sum('amount', { as: 'amount' }).first();
+	app.get('/statement', { preHandler: [checkSessionIdExists] }, async (request, response) => {
+		const { sessionId } = request.cookies;
+		const statement = await knex('transactions')
+			.where('session_id', sessionId)
+			.sum('amount', { as: 'amount' })
+			.first();
 		return response.send({ statement });
 	});
 
-	app.post('/', async (request, response) => {
+	app.post('/', { preHandler: [checkSessionIdExists] }, async (request, response) => {
 		const createTransactionSchema = z.object({
 			title: z.string(),
 			amount: z.number(),

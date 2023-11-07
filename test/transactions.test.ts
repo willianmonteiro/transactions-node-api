@@ -48,4 +48,48 @@ describe('Transactions', () => {
 			expect.objectContaining(createTransactionResponse.body)
 		]);
 	});
+
+	it('Should be able to get a specific transactions', async () => {
+		const createTransactionResponse = await request(app.server)
+			.post('/transactions')
+			.send({
+				title: 'Transaction from test',
+				amount: 5000,
+				type: 'income'
+			});
+
+		const cookies = createTransactionResponse.get('Set-Cookie');
+		const response = await request(app.server)
+			.get(`/transactions/${createTransactionResponse.body.id}`)
+			.set('Cookie', cookies)
+			.expect(200);
+		expect(response.body.transaction)
+			.toEqual(expect.objectContaining(createTransactionResponse.body));
+	});
+
+	it('Should be able to get a statement', async () => {
+		const createTransactionResponse = await request(app.server)
+			.post('/transactions')
+			.send({
+				title: 'Transaction from test',
+				amount: 5000,
+				type: 'income'
+			});
+
+		const cookies = createTransactionResponse.get('Set-Cookie');
+		await request(app.server)
+			.post('/transactions')
+			.set('Cookie', cookies)
+			.send({
+				title: 'Other transaction from test',
+				amount: 2000,
+				type: 'expense'
+			});
+
+		const response = await request(app.server)
+			.get('/transactions/statement')
+			.set('Cookie', cookies)
+			.expect(200);
+		expect(response.body.statement).toEqual({ amount: 3000 });
+	});
 });

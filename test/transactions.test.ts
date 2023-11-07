@@ -35,7 +35,8 @@ describe('Transactions', () => {
 		const cookies = createTransactionResponse.get('Set-Cookie');
 		const response = await request(app.server)
 			.get('/transactions')
-			.set('Cookie', cookies);
+			.set('Cookie', cookies)
+			.expect(200);
 
 		expect(response.body.transactions).toEqual([
 			expect.objectContaining(createTransactionResponse.body)

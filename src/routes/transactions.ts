@@ -5,9 +5,7 @@ import { knex } from '../database';
 import { checkSessionIdExists } from '../middleware/check-session-id';
 
 export async function transactionRoutes(app: FastifyInstance) {
-	app.addHook('preHandler', checkSessionIdExists);
-
-	app.get('/', async (request, response) => {
+	app.get('/', { preHandler: [checkSessionIdExists] }, async (request, response) => {
 		const { sessionId } = request.cookies;
 		const transactions = await knex('transactions')
 			.where('session_id', sessionId)
@@ -20,7 +18,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 			});
 	});
 
-	app.get('/:id', async (request, response) => {
+	app.get('/:id', { preHandler: [checkSessionIdExists] }, async (request, response) => {
 		const getTransactionParamsSchema = z.object({
 			id: z.string().uuid(),
 		});
@@ -32,7 +30,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 		return response.send({ transaction });
 	});
 
-	app.get('/statement', async (request, response) => {
+	app.get('/statement', { preHandler: [checkSessionIdExists] }, async (request, response) => {
 		const { sessionId } = request.cookies;
 		const statement = await knex('transactions')
 			.where('session_id', sessionId)
@@ -59,7 +57,7 @@ export async function transactionRoutes(app: FastifyInstance) {
 			});
 		}
 
-		const transaction = await knex('transactions')
+		const [transaction] = await knex('transactions')
 			.insert({
 				id: randomUUID(),
 				title, 
@@ -67,7 +65,6 @@ export async function transactionRoutes(app: FastifyInstance) {
 				session_id: sessionId
 			})
 			.returning('*');
-
 		return response
 			.status(201)
 			.send(transaction);

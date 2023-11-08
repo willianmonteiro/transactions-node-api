@@ -1,5 +1,12 @@
+# deps
 node_modules
-db/app.db
-db/test.db
+
+# database
+db/*.db
+
+# environment
 .env
 .env.test
+
+# build
+dist
